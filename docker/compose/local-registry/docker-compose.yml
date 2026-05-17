@@ -1,0 +1,60 @@
+services:
+  registry:
+    image: registry:2
+    container_name: local-registry
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '[http://registry.martas.internal,http://registry]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: '[HEAD,GET,OPTIONS,DELETE,POST,PUT,PATCH]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: '[Authorization,Accept,Cache-Control]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: '[true]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: '[Docker-Content-Digest]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Max-Age: '[1728000]'
+    volumes:
+      - registry-data:/var/lib/registry
+    networks:
+      registry:
+        ipv4_address: 10.88.1.42
+        ipv6_address: fd00:dead:beef:4:5::2
+
+  registry-ui:
+    image: joxit/docker-registry-ui:latest
+    container_name: local-registry-ui
+    restart: unless-stopped
+    depends_on:
+      - registry
+    # ports:
+    #   - "8081:80"
+    environment:
+      SINGLE_REGISTRY: "true"
+      REGISTRY_TITLE: Local Registry
+      DELETE_IMAGES: "true"
+      # Keep REGISTRY_URL empty so UI uses same-origin /v2 proxy path.
+      NGINX_PROXY_PASS_URL: http://registry:5000
+    networks:
+      registry:
+        ipv4_address: 10.88.1.43
+        ipv6_address: fd00:dead:beef:4:5::3
+      proxy:
+        ipv4_address: 10.88.255.6
+        ipv6_address: fd00:dead:beef:4:ffff::6
+
+volumes:
+  registry-data:
+
+networks:
+  registry:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.88.1.40/29
+          gateway: 10.88.1.41
+        - subnet: fd00:dead:beef:4:5::/80
+          gateway: fd00:dead:beef:4:5::1
+  proxy:
+    external: true
