@@ -1,0 +1,28 @@
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ee:2.41.0
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+      - /opt/traefik/certs/step_root_ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    ports:
+      - 9443:9443
+      - 8000:8000 # Remove if you do not intend to use Edge Agents
+    environment:
+      TRUSTED_ORIGINS: "https://portainer.martas.internal"
+    networks:
+      proxy:
+        ipv4_address: 10.88.255.8
+        ipv6_address: fd00:dead:beef:4:ffff::8
+    extra_hosts:
+      - "authentik.martas.internal:10.88.255.254"
+
+volumes:
+  portainer_data:
+    name: portainer_data
+
+networks:
+  proxy:
+    external: true
