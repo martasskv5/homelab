@@ -34,17 +34,17 @@ services:
         - "--certificatesresolvers.step-ca.acme.tlschallenge=true"
       environment:
         - "LEGO_CA_CERTIFICATES=/etc/traefik/certs/root_ca.crt"
-      env_file:
-        - .env
+      # env_file:
+      #   - .env
       ports:
         - '${NETBIRD_BIND_IP}:80:80'
         - '${NETBIRD_BIND_IP}:443:443'
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock:ro
-        - ./config/dynamic.yml:/etc/traefik/internal-dynamic.yaml:ro
-        - ./certs:/certs:ro
-        - ./certs/step_root_ca.crt:/etc/traefik/certs/root_ca.crt:ro
-        - ./acme.json:/acme.json
+        - /opt/traefik-manager/config/dynamic.yml:/etc/traefik/internal-dynamic.yaml:ro
+        - /opt/traefik/certs:/certs:ro
+        - /opt/traefik/certs/step_root_ca.crt:/etc/traefik/certs/root_ca.crt:ro
+        - /opt/traefik/certs/acme.json:/acme.json
       logging:
         driver: "json-file"
         options:
@@ -61,12 +61,12 @@ services:
       - TRAEFIK_API_URL=http://traefik-internal:8080
       - CONFIG_PATH=/app/config/dynamic.yml
       - BACKUP_DIR=/app/backups
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
     volumes:
-      - ./config:/app/config
-      - ./backups:/app/backups
-      - ./certs/step_root_ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - /opt/traefik-manager/config:/app/config
+      - /opt/traefik-manager/backups:/app/backups
+      - /opt/traefik/certs/step_root_ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
     labels:
       - traefik.enable=true
       - traefik.scope=internal
@@ -90,6 +90,7 @@ networks:
   # netbird_netbird:
   #   external: true
   proxy:
+    name: proxy
     enable_ipv6: true
     ipam:
       config:
