@@ -1,0 +1,79 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    #user: "1000:1000"
+    volumes:
+      - /opt/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    # ports:
+    #   - 9292:9090
+    restart: unless-stopped
+    networks:
+      monitoring:
+        ipv4_address: 10.88.1.26
+        ipv6_address: fd00:dead:beef:4:3::2
+
+  grafana:
+    image: grafana/grafana
+    user: "1000:1000"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Bratislava
+      - UMASK_SET=022
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=${GF_AUTH_GENERIC_OAUTH_ENABLED}
+      - GF_AUTH_GENERIC_OAUTH_NAME=${GF_AUTH_GENERIC_OAUTH_NAME}
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=${GF_AUTH_GENERIC_OAUTH_CLIENT_ID}
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=${GF_AUTH_GENERIC_OAUTH_SCOPES}
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${GF_AUTH_GENERIC_OAUTH_AUTH_URL}
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${GF_AUTH_GENERIC_OAUTH_TOKEN_URL}
+      - GF_AUTH_GENERIC_OAUTH_API_URL=${GF_AUTH_GENERIC_OAUTH_API_URL}
+      - GF_AUTH_SIGNOUT_REDIRECT_URL=${GF_AUTH_SIGNOUT_REDIRECT_URL}
+      - GF_AUTH_OAUTH_AUTO_LOGIN=${GF_AUTH_OAUTH_AUTO_LOGIN}
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
+      - GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE=true
+      - SSL_CERT_FILE=/etc/ssl/certs/step_root_ca.crt
+    # ports:
+    #   - 3000:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - /opt/monitoring/certs/step_root_ca.crt:/etc/ssl/certs/step_root_ca.crt:ro
+    restart: unless-stopped
+    networks:
+      monitoring:
+        ipv4_address: 10.88.1.27
+        ipv6_address: fd00:dead:beef:4:3::3
+      proxy:
+        ipv4_address: 10.88.255.5
+        ipv6_address: fd00:dead:beef:4:ffff::5
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    command: "--path.rootfs=/host"
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      monitoring:
+        ipv4_address: 10.88.1.29
+        ipv6_address: fd00:dead:beef:4:3::4
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  monitoring:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.88.1.24/29
+          gateway: 10.88.1.25
+        - subnet: fd00:dead:beef:4:3::/80
+          gateway: fd00:dead:beef:4:3::1
+  proxy:
+    external: true
