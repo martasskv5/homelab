@@ -1,0 +1,74 @@
+services:
+  # pgadmin:
+  #     image: dpage/pgadmin4:9
+  #     container_name: pgadmin-hub
+  #     restart: unless-stopped
+  #     # ports:
+  #     #    - "127.0.0.1:8088:80"
+  #     environment:
+  #         PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+  #         PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+  #         PGADMIN_CONFIG_SERVER_MODE: "True"
+  #     volumes:
+  #         - pgadmin-data:/var/lib/pgadmin
+  #     extra_hosts:
+  #         - "host.docker.internal:host-gateway"
+  #     networks:
+  #         - proxy
+
+  dbgate:
+    image: dbgate/dbgate
+    restart: always
+    # ports:
+    #   - 80:3000
+    volumes:
+      - dbgate-data:/root/.dbgate
+    # environment:
+    #   CONNECTIONS: con1,con2,con3,con4
+
+    #   LABEL_con1: MySql
+    #   SERVER_con1: mysql
+    #   USER_con1: root
+    #   PASSWORD_con1: TEST
+    #   PORT_con1: 3306
+    #   ENGINE_con1: mysql@dbgate-plugin-mysql
+
+    #   LABEL_con2: Postgres
+    #   SERVER_con2: postgres
+    #   USER_con2: postgres
+    #   PASSWORD_con2: TEST
+    #   PORT_con2: 5432
+    #   ENGINE_con2: postgres@dbgate-plugin-postgres
+
+    #   LABEL_con3: MongoDB
+    #   URL_con3: mongodb://mongo:27017
+    #   ENGINE_con3: mongo@dbgate-plugin-mongo
+
+    #   LABEL_con4: SQLite
+    #   FILE_con4: /home/jan/feeds.sqlite
+    #   ENGINE_con4: sqlite@dbgate-plugin-sqlite
+    networks:
+      db:
+        ipv4_address: 10.88.254.254
+        ipv6_address: fd00:dead:beef:4:fd::254
+      proxy:
+        ipv4_address: 10.88.255.9
+        ipv6_address: fd00:dead:beef:4:ffff::9
+
+volumes:
+  dbgate-data:
+    driver: local
+  pgadmin-data:
+
+networks:
+  db:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.88.254.0/24
+          gateway: 10.88.254.1
+        - subnet: fd00:dead:beef:4:fd::/80
+          gateway: fd00:dead:beef:4:fd::1
+  proxy:
+    external: true

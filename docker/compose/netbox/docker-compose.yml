@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  netbox:
+    image: netbox-custom:latest
+    restart: unless-stopped
+    # ports:
+    #   - "8000:8080"
+    environment:
+      PLUGINS: "netbox_topology_views"
+      API_TOKEN_PEPPER_1: "${API_TOKEN_PEPPER_1}"
+      CORS_ORIGIN_ALLOW_ALL: "${CORS_ORIGIN_ALLOW_ALL}"
+      DB_HOST: "${DB_HOST}"
+      DB_NAME: "${DB_NAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_USER: "${DB_USER}"
+      EMAIL_FROM: "${EMAIL_FROM}"
+      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+      EMAIL_PORT: "${EMAIL_PORT}"
+      EMAIL_SERVER: "${EMAIL_SERVER}"
+      EMAIL_TIMEOUT: "${EMAIL_TIMEOUT}"
+      EMAIL_USERNAME: "${EMAIL_USERNAME}"
+      EMAIL_USE_SSL: "${EMAIL_USE_SSL}"
+      EMAIL_USE_TLS: "${EMAIL_USE_TLS}"
+      GRANIAN_BACKPRESSURE: "${GRANIAN_BACKPRESSURE}"
+      GRANIAN_WORKERS: "${GRANIAN_WORKERS}"
+      GRAPHQL_ENABLED: "${GRAPHQL_ENABLED}"
+      MEDIA_ROOT: "${MEDIA_ROOT}"
+      METRICS_ENABLED: "${METRICS_ENABLED}"
+      REDIS_CACHE_DATABASE: "${REDIS_CACHE_DATABASE}"
+      REDIS_CACHE_HOST: "${REDIS_CACHE_HOST}"
+      REDIS_CACHE_INSECURE_SKIP_TLS_VERIFY: "${REDIS_CACHE_INSECURE_SKIP_TLS_VERIFY}"
+      REDIS_CACHE_PASSWORD: "${REDIS_CACHE_PASSWORD}"
+      REDIS_CACHE_SSL: "${REDIS_CACHE_SSL}"
+      REDIS_DATABASE: "${REDIS_DATABASE}"
+      REDIS_HOST: "${REDIS_HOST}"
+      REDIS_INSECURE_SKIP_TLS_VERIFY: "${REDIS_INSECURE_SKIP_TLS_VERIFY}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      REDIS_SSL: "${REDIS_SSL}"
+      RELEASE_CHECK_URL: "${RELEASE_CHECK_URL}"
+      SECRET_KEY: "${SECRET_KEY}"
+      SKIP_SUPERUSER: "${SKIP_SUPERUSER}"
+      WEBHOOKS_ENABLED: "${WEBHOOKS_ENABLED}"
+    depends_on:
+      - postgres
+      - redis
+      - redis-cache
+    networks:
+      netbox:
+        ipv4_address: 172.16.5.2
+      proxy:
+        ipv4_address: 172.31.0.9
+    volumes:
+      - /opt/netbox/media:/opt/netbox/netbox/media
+
+  postgres:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      netbox:
+        ipv4_address: 172.16.5.3
+
+  redis:
+    image: redis:6
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    command: ["redis-server","--requirepass","${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    networks:
+      netbox:
+        ipv4_address: 172.16.5.4
+
+  redis-cache:
+    image: redis:6
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${REDIS_CACHE_PASSWORD}"
+    command: ["redis-server","--requirepass","${REDIS_CACHE_PASSWORD}"]
+    volumes:
+      - redis_cache_data:/data
+    networks:
+      netbox:
+        ipv4_address: 172.16.5.5
+  netbox-worker:
+    image: netbox-custom:latest
+    depends_on:
+      - netbox
+    environment:
+      PLUGINS: "netbox_topology_views"
+      API_TOKEN_PEPPER_1: "${API_TOKEN_PEPPER_1}"
+      CORS_ORIGIN_ALLOW_ALL: "${CORS_ORIGIN_ALLOW_ALL}"
+      DB_HOST: "${DB_HOST}"
+      DB_NAME: "${DB_NAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_USER: "${DB_USER}"
+      EMAIL_FROM: "${EMAIL_FROM}"
+      EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+      EMAIL_PORT: "${EMAIL_PORT}"
+      EMAIL_SERVER: "${EMAIL_SERVER}"
+      EMAIL_TIMEOUT: "${EMAIL_TIMEOUT}"
+      EMAIL_USERNAME: "${EMAIL_USERNAME}"
+      EMAIL_USE_SSL: "${EMAIL_USE_SSL}"
+      EMAIL_USE_TLS: "${EMAIL_USE_TLS}"
+      GRANIAN_BACKPRESSURE: "${GRANIAN_BACKPRESSURE}"
+      GRANIAN_WORKERS: "${GRANIAN_WORKERS}"
+      GRAPHQL_ENABLED: "${GRAPHQL_ENABLED}"
+      MEDIA_ROOT: "${MEDIA_ROOT}"
+      METRICS_ENABLED: "${METRICS_ENABLED}"
+      REDIS_CACHE_DATABASE: "${REDIS_CACHE_DATABASE}"
+      REDIS_CACHE_HOST: "${REDIS_CACHE_HOST}"
+      REDIS_CACHE_INSECURE_SKIP_TLS_VERIFY: "${REDIS_CACHE_INSECURE_SKIP_TLS_VERIFY}"
+      REDIS_CACHE_PASSWORD: "${REDIS_CACHE_PASSWORD}"
+      REDIS_CACHE_SSL: "${REDIS_CACHE_SSL}"
+      REDIS_DATABASE: "${REDIS_DATABASE}"
+      REDIS_HOST: "${REDIS_HOST}"
+      REDIS_INSECURE_SKIP_TLS_VERIFY: "${REDIS_INSECURE_SKIP_TLS_VERIFY}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      REDIS_SSL: "${REDIS_SSL}"
+      RELEASE_CHECK_URL: "${RELEASE_CHECK_URL}"
+      SECRET_KEY: "${SECRET_KEY}"
+      SKIP_SUPERUSER: "${SKIP_SUPERUSER}"
+      WEBHOOKS_ENABLED: "${WEBHOOKS_ENABLED}"
+    command: python3 /opt/netbox/netbox/manage.py rqworker
+    networks:
+      netbox:
+        ipv4_address: 172.16.5.6 # Assign a unique IP in your range
+    volumes:
+      - /opt/netbox/media:/opt/netbox/netbox/media
+
+volumes:
+  postgres_data:
+  redis_data:
+  redis_cache_data:
+
+networks:
+  netbox:
+    ipam:
+      config:
+        - subnet: 172.16.5.0/24
+  proxy:
+    external: true
+
