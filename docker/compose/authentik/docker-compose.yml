@@ -17,8 +17,9 @@ services:
     volumes:
     - database:/var/lib/postgresql/data
     networks:
-      authentic:
-        ipv4_address: 172.16.4.3
+      authentik:
+        ipv4_address: 10.88.1.18
+        ipv6_address: fd00:dead:beef:4:2::2
   server:
     command: server
     depends_on:
@@ -40,10 +41,12 @@ services:
     - /opt/authentik/data:/data
     - /opt/authentik/custom-templates:/templates
     networks:
-      authentic:
-        ipv4_address: 172.16.4.2
+      authentik:
+        ipv4_address: 10.88.1.19
+        ipv6_address: fd00:dead:beef:4:2::3
       proxy:
-        ipv4_address: 172.31.0.7
+        ipv4_address: 10.88.255.4
+        ipv6_address: fd00:dead:beef:4:ffff::4
   worker:
     command: worker
     depends_on:
@@ -65,15 +68,18 @@ services:
     - /opt/authentik/certs:/certs
     - /opt/authentik/custom-templates:/templates
     networks:
-      authentic:
-        ipv4_address: 172.16.4.4
+      authentik:
+        ipv4_address: 10.88.1.20
+        ipv6_address: fd00:dead:beef:4:2::4
 volumes:
   database:
     driver: local
 networks:
-  authentic:
+  authentik:
+    enable_ipv6: true
     ipam:
       config:
-        - subnet: 172.16.4.0/24
+        - subnet: 10.88.1.16/29
+        - subnet: fd00:dead:beef:4:2::/80
   proxy:
     external: true
