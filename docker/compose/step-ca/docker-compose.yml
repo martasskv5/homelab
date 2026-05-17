@@ -1,0 +1,27 @@
+version: "3.8"
+services:
+  step-ca:
+    image: smallstep/step-ca:latest
+    container_name: step-ca
+    ports:
+      - "7000:9000"
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=${DOCKER_STEPCA_INIT_NAME}
+      - DOCKER_STEPCA_INIT_DNS_NAMES=${DOCKER_STEPCA_INIT_DNS_NAMES}
+      - DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT=${DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT}
+      - DOCKER_STEPCA_INIT_ACME=${DOCKER_STEPCA_INIT_ACME}
+      - DOCKER_STEPCA_INIT_PASSWORD=${DOCKER_STEPCA_INIT_PASSWORD}
+    volumes:
+      - step-ca-data:/home/step
+    restart: unless-stopped
+    networks:
+      proxy:
+        ipv4_address: 10.88.255.2
+        ipv6_address: fd00:dead:beef:4:ffff::2
+
+volumes:
+  step-ca-data:
+
+networks:
+  proxy:
+    external: true

@@ -1,0 +1,93 @@
+services:
+  # Internal Traefik reverse proxy (VPN-only via NetBird IP)
+  # This lets you use http(s)://<service>.martas.internal without exposing routes publicly.
+  # IMPORTANT: set NETBIRD_BIND_IP to this host NetBird IP in .env (for example 100.90.10.20).
+  # IMPORTANT: copy cert from step-ca to certs/step_root_ca.crt and add it to your system trust store to avoid TLS errors in browsers.
+  traefik-internal:
+      image: traefik:v3.6
+      container_name: traefik-internal
+      restart: unless-stopped
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      networks:
+        # netbird_netbird:
+        #   ipv4_address: 172.30.0.11
+        proxy:
+          ipv4_address: 10.88.255.254
+          ipv6_address: fd00:dead:beef:4:ffff:ffff:ffff:fffe
+      command:
+        - "--log.level=INFO"
+        - "--accesslog=true"
+        - "--providers.docker=true"
+        - "--providers.docker.exposedbydefault=false"
+        # - "--providers.docker.network=netbird"
+        - "--providers.docker.constraints=Label(`traefik.scope`,`internal`)"
+        - "--providers.file.filename=/etc/traefik/internal-dynamic.yaml"
+        - "--entrypoints.web.address=:80"
+        - "--entrypoints.websecure.address=:443"
+        - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+        - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+        - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+        - "--certificatesresolvers.step-ca.acme.email=${ACME_EMAIL}"
+        - "--certificatesresolvers.step-ca.acme.storage=/acme.json"
+        - "--certificatesresolvers.step-ca.acme.caserver=${ACME_SERVER}"
+        - "--certificatesresolvers.step-ca.acme.tlschallenge=true"
+      environment:
+        - "LEGO_CA_CERTIFICATES=/etc/traefik/certs/root_ca.crt"
+      ports:
+        - '${NETBIRD_BIND_IP}:80:80'
+        - '${NETBIRD_BIND_IP}:443:443'
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ./config/dynamic.yml:/etc/traefik/internal-dynamic.yaml:ro
+        - ./certs:/certs:ro
+        - ./certs/step_root_ca.crt:/etc/traefik/certs/root_ca.crt:ro
+        - ./acme.json:/acme.json
+      logging:
+        driver: "json-file"
+        options:
+          max-size: "500m"
+          max-file: "2"
+
+    # Internal management UI for Traefik routes (*.martas.internal)
+  traefik-manager:
+    image: ghcr.io/chr0nzz/traefik-manager:latest
+    container_name: traefik-manager
+    restart: unless-stopped
+    environment:
+      - COOKIE_SECURE=true
+      - TRAEFIK_API_URL=http://traefik-internal:8080
+      - CONFIG_PATH=/app/config/dynamic.yml
+      - BACKUP_DIR=/app/backups
+    volumes:
+      - ./config:/app/config
+      - ./backups:/app/backups
+      - ./certs/step_root_ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    labels:
+      - traefik.enable=true
+      - traefik.scope=internal
+      - traefik.http.routers.traefik-manager.rule=Host(`traefik-manager.martas.internal`)
+      - traefik.http.routers.traefik-manager.entrypoints=web,websecure
+      - traefik.http.routers.traefik-manager.tls=true
+      - traefik.http.services.traefik-manager.loadbalancer.server.port=5000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "2"
+    networks:
+        proxy:
+          ipv4_address: 10.88.255.253
+          ipv6_address: fd00:dead:beef:4:ffff:ffff:ffff:fffd
+        # netbird_netbird:
+        #   ipv4_address: 172.30.0.12
+
+networks:
+  # netbird_netbird:
+  #   external: true
+  proxy:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.88.255.0/24
+        - subnet: fd00:dead:beef:4:ffff::/80
