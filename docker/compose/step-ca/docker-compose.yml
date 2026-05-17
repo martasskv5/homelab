@@ -11,6 +11,8 @@ services:
       - DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT=${DOCKER_STEPCA_INIT_REMOTE_MANAGEMENT}
       - DOCKER_STEPCA_INIT_ACME=${DOCKER_STEPCA_INIT_ACME}
       - DOCKER_STEPCA_INIT_PASSWORD=${DOCKER_STEPCA_INIT_PASSWORD}
+    env_file:
+      - .env
     volumes:
       - step-ca-data:/home/step
     restart: unless-stopped

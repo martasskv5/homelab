@@ -34,6 +34,8 @@ services:
         - "--certificatesresolvers.step-ca.acme.tlschallenge=true"
       environment:
         - "LEGO_CA_CERTIFICATES=/etc/traefik/certs/root_ca.crt"
+      env_file:
+        - .env
       ports:
         - '${NETBIRD_BIND_IP}:80:80'
         - '${NETBIRD_BIND_IP}:443:443'
@@ -59,6 +61,8 @@ services:
       - TRAEFIK_API_URL=http://traefik-internal:8080
       - CONFIG_PATH=/app/config/dynamic.yml
       - BACKUP_DIR=/app/backups
+    env_file:
+      - .env
     volumes:
       - ./config:/app/config
       - ./backups:/app/backups
