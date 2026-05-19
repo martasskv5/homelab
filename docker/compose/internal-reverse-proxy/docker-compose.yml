@@ -9,9 +9,11 @@ services:
       restart: unless-stopped
       extra_hosts:
         - "host.docker.internal:host-gateway"
+        - "ca.martas.internal:10.88.255.2"
       networks:
-        # netbird_netbird:
-        #   ipv4_address: 172.30.0.11
+        netbird_netbird:
+          ipv4_address: 10.88.1.6
+          ipv6_address: fd00:dead:beef:4:1::6
         proxy:
           ipv4_address: 10.88.255.254
           ipv6_address: fd00:dead:beef:4:ffff:ffff:ffff:fffe
@@ -83,12 +85,13 @@ services:
         proxy:
           ipv4_address: 10.88.255.253
           ipv6_address: fd00:dead:beef:4:ffff:ffff:ffff:fffd
-        # netbird_netbird:
-        #   ipv4_address: 172.30.0.12
+        netbird_netbird:
+          ipv4_address: 10.88.1.7
+          ipv6_address: fd00:dead:beef:4:1::7
 
 networks:
-  # netbird_netbird:
-  #   external: true
+  netbird_netbird:
+    external: true
   proxy:
     name: proxy
     enable_ipv6: true

@@ -5,6 +5,10 @@ services:
     container_name: step-ca
     ports:
       - "7000:9000"
+    extra_hosts:
+      - "portainer.martas.internal:10.88.255.254"
+      - "ipam.martas.internal:10.88.255.254"
+      - "traefik-manager.martas.internal:10.88.255.254"
     environment:
       - DOCKER_STEPCA_INIT_NAME=${DOCKER_STEPCA_INIT_NAME}
       - DOCKER_STEPCA_INIT_DNS_NAMES=${DOCKER_STEPCA_INIT_DNS_NAMES}
