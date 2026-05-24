@@ -4,19 +4,19 @@ services:
   # IMPORTANT: set NETBIRD_BIND_IP to this host NetBird IP in .env (for example 100.90.10.20).
   # IMPORTANT: copy cert from step-ca to certs/step_root_ca.crt and add it to your system trust store to avoid TLS errors in browsers.
   traefik-internal:
-      image: traefik:v3.6
+      image: traefik:v3.7
       container_name: traefik-internal
       restart: unless-stopped
       extra_hosts:
         - "host.docker.internal:host-gateway"
         - "ca.martas.internal:10.88.255.2"
       networks:
-        netbird_netbird:
-          ipv4_address: 10.88.1.6
-          ipv6_address: fd00:dead:beef:4:1::6
         proxy:
           ipv4_address: 10.88.255.254
           ipv6_address: fd00:dead:beef:4:ffff:ffff:ffff:fffe
+        netbird_netbird:
+          ipv4_address: 10.88.1.6
+          ipv6_address: fd00:dead:beef:4:1::6
       command:
         - "--log.level=INFO"
         - "--accesslog=true"
@@ -69,6 +69,8 @@ services:
       - /opt/traefik-manager/config:/app/config
       - /opt/traefik-manager/backups:/app/backups
       - /opt/traefik/certs/step_root_ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - /opt/traefik/certs/acme.json:/app/acme.json:ro
+      - /opt/traefik/logs/access.log:/app/logs/access.log:ro
     labels:
       - traefik.enable=true
       - traefik.scope=internal
@@ -90,8 +92,6 @@ services:
           ipv6_address: fd00:dead:beef:4:1::7
 
 networks:
-  netbird_netbird:
-    external: true
   proxy:
     name: proxy
     enable_ipv6: true
@@ -99,3 +99,5 @@ networks:
       config:
         - subnet: 10.88.255.0/24
         - subnet: fd00:dead:beef:4:ffff::/80
+  netbird_netbird:
+    external: true
