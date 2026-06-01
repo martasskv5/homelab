@@ -16,6 +16,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
+      db-net:
+        ipv4_address: 10.88.254.254
+        ipv6_address: fd00:dead:beef:4:fffe::254
       proxy:
         ipv4_address: 10.88.255.11
         ipv6_address: fd00:dead:beef:4:ffff::11
@@ -24,5 +27,12 @@ volumes:
   pgadmin-data:
 
 networks:
+  db-net:
+    name: proxy
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.88.254.0/24
+        - subnet: fd00:dead:beef:4:fffe::/80
   proxy:
     external: true
