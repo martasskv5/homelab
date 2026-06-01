@@ -1,0 +1,28 @@
+name: pgadmin-hub
+
+services:
+  pgadmin:
+    image: dpage/pgadmin4:9
+    container_name: pgadmin-hub
+    restart: unless-stopped
+    # ports:
+    #    - "127.0.0.1:8088:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      proxy:
+        ipv4_address: 10.88.255.11
+        ipv6_address: fd00:dead:beef:4:ffff::11
+
+volumes:
+  pgadmin-data:
+
+networks:
+  proxy:
+    external: true
