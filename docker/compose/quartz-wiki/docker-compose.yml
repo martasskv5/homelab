@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  quartz-wiki:
+    image: localhost:5000/quartz-wiki:current
+    # ports:
+    #   - "8080:80"
+    restart: unless-stopped
+    networks:
+      proxy:
+        ipv4_address: 10.88.255.14
+        ipv6_address: fd00:dead:beef:4:ffff::14
+
+networks:
+  proxy:
+    external: true

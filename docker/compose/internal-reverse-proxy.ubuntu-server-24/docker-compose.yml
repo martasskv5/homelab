@@ -3,14 +3,15 @@ services:
   # This lets you use http(s)://<service>.martas.internal without exposing routes publicly.
   # IMPORTANT: set NETBIRD_BIND_IP to this host NetBird IP in .env (for example 100.90.10.20).
   traefik-internal:
-      image: traefik:v3.6
+      image: traefik:v3.7
       container_name: traefik-internal
       restart: unless-stopped
       extra_hosts:
         - "host.docker.internal:host-gateway"
         - "ca.martas.internal:100.108.1.1"
       networks:
-        - proxy
+        proxy:
+          ipv4_address: 10.89.255.254
         #- kasm_default_network
       command:
         - "--log.level=INFO"
@@ -54,7 +55,8 @@ services:
     container_name: traefik-manager
     restart: unless-stopped
     networks:
-      - proxy
+      proxy:
+        ipv4_address: 10.89.255.253
     environment:
       - COOKIE_SECURE=true
       - TRAEFIK_API_URL=http://traefik-internal:8080
@@ -80,6 +82,9 @@ services:
 
 networks:
   proxy:
-    external: true
-  #kasm_default_network:
-   # external: true 
+    name: proxy
+    # enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.89.255.0/24
+        # - subnet: fd00:dead:beef:4:ffff::/80
