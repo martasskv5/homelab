@@ -8,8 +8,6 @@ services:
       netbird:
         ipv4_address: 10.88.1.2
         ipv6_address: fd00:dead:beef:4:1::2
-    environment:
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     command:
       # Logging
       - "--log.level=INFO"
@@ -20,7 +18,7 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=netbird_netbird"
+      - "--providers.docker.network=netbird"
       - "--providers.docker.constraints=Label(`traefik.scope`,`public`)"
       # Entrypoints
       - "--entrypoints.web.address=:80"
@@ -33,47 +31,26 @@ services:
       # HTTP to HTTPS redirect
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      # Let's Encrypt ACME - DNS-01 challenge
+      # Let's Encrypt ACME
       - "--certificatesresolvers.letsencrypt.acme.email=admin@0z6sw.qzz.io"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
-      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.delaybeforecheck=10"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       # gRPC transport settings
       - "--serverstransport.forwardingtimeouts.responseheadertimeout=0s"
       - "--serverstransport.forwardingtimeouts.idleconntimeout=0s"
       - "--providers.file.filename=/etc/traefik/dynamic.yaml"
     ports:
-      - "${PUBLIC_BIND_IP}:443:443"
-      - "${PUBLIC_BIND_IP}:80:80"
+      - '${PUBLIC_BIND_IP}:443:443'
+      - '${PUBLIC_BIND_IP}:80:80'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - netbird_traefik_letsencrypt:/letsencrypt
+      - certbot-certs:/etc/letsencrypt:ro
       - ./traefik-dynamic.yaml:/etc/traefik/dynamic.yaml:ro
     logging:
       driver: "json-file"
       options:
         max-size: "500m"
-        max-file: "2"
-
-  certbot-cloudflare:
-    image: certbot/dns-cloudflare:latest
-    container_name: netbird-certbot
-    restart: unless-stopped
-    networks:
-      netbird:
-        ipv4_address: 10.88.1.8
-        ipv6_address: fd00:dead:beef:4:1::8
-    volumes:
-      - certbot-certs:/etc/letsencrypt
-      - ./cloudflare.ini:/cloudflare.ini:ro
-      - ./proxy-certs:/proxy-certs
-    entrypoint: ["/bin/sh", "-c", "while true; do certbot certonly --dns-cloudflare --dns-cloudflare-credentials /cloudflare.ini --dns-cloudflare-propagation-seconds 20 --agree-tos --email admin@0z6sw.qzz.io --cert-name martas.qzz.io -d 'martas.qzz.io' -d '*.martas.qzz.io' --keep-until-expiring --non-interactive --deploy-hook 'cp /etc/letsencrypt/live/martas.qzz.io/fullchain.pem /proxy-certs/tls.crt && cp /etc/letsencrypt/live/martas.qzz.io/privkey.pem /proxy-certs/tls.key && chmod 644 /proxy-certs/tls.crt && chmod 640 /proxy-certs/tls.key && chown 1000:1000 /proxy-certs/tls.crt /proxy-certs/tls.key'; sleep 12h; done"]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
         max-file: "2"
 
   # UI dashboard
@@ -113,7 +90,7 @@ services:
         ipv4_address: 10.88.1.4
         ipv6_address: fd00:dead:beef:4:1::4
     ports:
-      - "3478:3478/udp"
+      - '3478:3478/udp'
     volumes:
       - netbird_data:/var/lib/netbird
       - ./config.yaml:/etc/netbird/config.yaml
@@ -150,9 +127,9 @@ services:
     image: netbirdio/reverse-proxy:latest
     container_name: netbird-proxy
     ports:
-      - "51820:51820/udp"
+    - 51820:51820/udp
     restart: unless-stopped
-    networks:
+    networks: 
       netbird:
         ipv4_address: 10.88.1.5
         ipv6_address: fd00:dead:beef:4:1::5
@@ -161,7 +138,7 @@ services:
     env_file:
       - ./proxy.env
     volumes:
-      - ./proxy-certs:/certs
+      - netbird_proxy_certs:/certs
     labels:
       - traefik.scope=public
       # TCP passthrough for any unmatched domain (proxy handles its own TLS)
@@ -178,10 +155,40 @@ services:
       options:
         max-size: "500m"
         max-file: "2"
+  
+  # Certbot container for automatic certificate renewal using Cloudflare DNS challenge instead of HTTP challenge (useful for wildcard certificates)
+  certbot-cloudflare:
+    image: certbot/dns-cloudflare:latest
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - ./cloudflare.ini:/cloudflare.ini:ro
+    # This keeps the container running as a daemon, checking for renewals twice a day
+    entrypoint: >
+      /bin/sh -c "
+      while true; do
+        certbot certonly \
+          --dns-cloudflare \
+          --dns-cloudflare-credentials /cloudflare.ini \
+          --dns-cloudflare-propagation-seconds 20 \
+          --agree-tos \
+          --email admin@0z6sw.onmicrosoft.com \
+          -d 'martas.qzz.io' \
+          -d '*.martas.qzz.io' \
+          --keep-yet-expired \
+          --non-interactive;
+        sleep 12h;
+      done"
+    restart: always
+    networks:
+      netbird:
+        ipv4_address: 10.88.1.6
+        ipv6_address: fd00:dead:beef:4:1::6
+
 
 volumes:
   netbird_data:
   netbird_traefik_letsencrypt:
+  netbird_proxy_certs:
   certbot-certs:
 
 networks:
